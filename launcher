@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Install additional packages
+if [[ -z "$HOMESERVER_ADDITIONAL_PIP_PACKAGES" ]]; then
+  echo HOMESERVER_ADDITIONAL_PIP_PACKAGES not set. No extra packages to install.
+else
+  echo Found HOMESERVER_ADDITIONAL_PIP_PACKAGES. Installing extra packages.
+  echo python -m pip install $HOMESERVER_ADDITIONAL_PIP_PACKAGES
+  python -m pip install --upgrade pip
+  python -m pip install $HOMESERVER_ADDITIONAL_PIP_PACKAGES
+fi
+
+# If Volume with Airlfow data does not exists, start new init
+if [[ "$(ls -A $AIRFLOW_HOME)" ]]
+then
+  echo "$AIRFLOW_HOME does exist and contains files."
+else
+  echo "$AIRFLOW_HOME does not exist or does not contain any files."
+  echo "Initializing Airflow"
+
+  airflow db init
+
+  airflow users create \
+    --username $HOMESERVER_AIRFLOW_USER \
+    --password $HOMESERVER_AIRFLOW_PASSWORD \
+    --firstname $HOMESERVER_AIRFLOW_FIRSTNAME \
+    --lastname $HOMESERVER_AIRFLOW_LASTNAME \
+    --email $HOMESERVER_AIRFLOW_EMAIL \
+    --role Admin
+fi
+
+# Start Apache Airflow
+airflow webserver --port $HOMESERVER_AIRFLOW_PORT &
+
+airflow scheduler
